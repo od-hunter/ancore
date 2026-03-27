@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
@@ -8,6 +9,13 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "baseUrl": ".",
+    "composite": false,
+    "paths": {
+      "@ancore/types": ["../types/src/index.ts"],
+      "@ancore/types/*": ["../types/src/*"]
+    },
+    "types": ["node", "jest"],
     "rootDir": "./src",
     "outDir": "./dist"
   },

@@ -11,10 +11,16 @@ import { SecuritySettings } from '../SecuritySettings';
 import { AboutScreen } from '../AboutScreen';
 import { SettingsGroup, SettingItem } from '../../../components/SettingsGroup';
 
+const SETTINGS_STORAGE_KEY = 'ancore_settings';
+
+function resetSettingsStorage() {
+  localStorage.setItem(SETTINGS_STORAGE_KEY, '');
+}
+
 // ── useSettings ──────────────────────────────────────────────────────────────
 
 describe('useSettings', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => resetSettingsStorage());
 
   it('returns default settings on first load', () => {
     const { result } = renderHook(() => useSettings());
@@ -26,13 +32,13 @@ describe('useSettings', () => {
     const { result } = renderHook(() => useSettings());
     act(() => result.current.updateSettings({ network: 'mainnet' }));
     expect(result.current.settings.network).toBe('mainnet');
-    const stored = JSON.parse(localStorage.getItem('ancore_settings')!);
+    const stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)!);
     expect(stored.network).toBe('mainnet');
   });
 
   it('rehydrates settings from localStorage', () => {
     localStorage.setItem(
-      'ancore_settings',
+      SETTINGS_STORAGE_KEY,
       JSON.stringify({ network: 'mainnet', autoLockTimeout: 15 })
     );
     const { result } = renderHook(() => useSettings());
@@ -232,7 +238,7 @@ describe('AboutScreen', () => {
 // ── SettingsScreen (integration) ─────────────────────────────────────────────
 
 describe('SettingsScreen', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => resetSettingsStorage());
 
   function renderSettingsScreen() {
     return render(
@@ -276,7 +282,7 @@ describe('SettingsScreen', () => {
 
   it('shows current network in root view', () => {
     localStorage.setItem(
-      'ancore_settings',
+      SETTINGS_STORAGE_KEY,
       JSON.stringify({ network: 'mainnet', autoLockTimeout: 5 })
     );
     renderSettingsScreen();

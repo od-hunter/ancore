@@ -6,7 +6,10 @@ import { Address, xdr } from '@stellar/stellar-sdk';
 import {
   AccountContract,
   type AccountContractReadOptions,
+  type AccountContractWriteResult,
+  addSessionKey as addSessionKeyHelper,
   addressToScVal,
+  getSessionKey as getSessionKeyHelper,
   AlreadyInitializedError,
   mapContractError,
   NotInitializedError,
@@ -16,6 +19,7 @@ import {
   scValToOptionalSessionKey,
   scValToSessionKey,
   scValToU64,
+  SessionKeyNotFoundError,
   symbolToScVal,
   u64ToScVal,
 } from '../index';
@@ -73,6 +77,33 @@ describe('AccountContract', () => {
       expect(inv.args[1]).toBeDefined();
       expect(inv.args[2]).toBeDefined();
     });
+
+    it('simulates the add_session_key write path and returns typed invocation data', async () => {
+      const server = {
+        getAccount: jest.fn().mockResolvedValue({
+          id: OWNER_ADDRESS,
+          sequence: '1',
+        }),
+        simulateTransaction: jest.fn().mockResolvedValue({
+          result: { retval: xdr.ScVal.scvVoid() },
+        }),
+      } as AccountContractReadOptions['server'];
+
+      const result = (await contract.addSessionKey(OWNER_ADDRESS, [0, 2], 1700000000, {
+        server,
+        sourceAccount: OWNER_ADDRESS,
+        networkPassphrase: 'Test SDF Network ; September 2015',
+      })) as AccountContractWriteResult;
+
+      expect(result.invocation.method).toBe('add_session_key');
+      expect(result.operation).toBeDefined();
+      expect(server.simulateTransaction).toHaveBeenCalled();
+    });
+
+    it('helper addSessionKey delegates to AccountContract', () => {
+      const invocation = addSessionKeyHelper(contract, OWNER_ADDRESS, [0], 1700000000);
+      expect(invocation.method).toBe('add_session_key');
+    });
   });
 
   describe('revokeSessionKey', () => {
@@ -118,6 +149,46 @@ describe('AccountContract', () => {
 
       expect(result).toBeNull();
       expect(server.simulateTransaction).toHaveBeenCalled();
+    });
+
+    it('maps a not-found simulation error to SessionKeyNotFoundError', async () => {
+      const server = {
+        getAccount: jest.fn().mockResolvedValue({
+          id: OWNER_ADDRESS,
+          sequence: '1',
+        }),
+        simulateTransaction: jest.fn().mockResolvedValue({
+          error: 'Session key not found',
+        }),
+      } as AccountContractReadOptions['server'];
+
+      await expect(
+        contract.getSessionKey(OWNER_ADDRESS, {
+          server,
+          sourceAccount: OWNER_ADDRESS,
+          networkPassphrase: 'Test SDF Network ; September 2015',
+        })
+      ).rejects.toThrow(SessionKeyNotFoundError);
+    });
+
+    it('helper getSessionKey delegates to AccountContract', async () => {
+      const server = {
+        getAccount: jest.fn().mockResolvedValue({
+          id: OWNER_ADDRESS,
+          sequence: '1',
+        }),
+        simulateTransaction: jest.fn().mockResolvedValue({
+          result: { retval: xdr.ScVal.scvVoid() },
+        }),
+      } as AccountContractReadOptions['server'];
+
+      const result = await getSessionKeyHelper(contract, OWNER_ADDRESS, {
+        server,
+        sourceAccount: OWNER_ADDRESS,
+        networkPassphrase: 'Test SDF Network ; September 2015',
+      });
+
+      expect(result).toBeNull();
     });
   });
 
@@ -290,5 +361,13 @@ describe('Error mapping', () => {
   it('mapContractError returns ContractInvocationError for unknown message', () => {
     const err = mapContractError('Some other error');
     expect(err.name).toBe('ContractInvocationError');
+  });
+
+  it('mapContractError maps session key not found with context', () => {
+    const err = mapContractError('Session key not found', undefined, {
+      sessionPublicKey: OWNER_ADDRESS,
+    });
+    expect(err).toBeInstanceOf(SessionKeyNotFoundError);
+    expect(err.message).toContain(OWNER_ADDRESS);
   });
 });
