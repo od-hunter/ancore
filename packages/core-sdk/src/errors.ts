@@ -87,6 +87,21 @@ export class BuilderValidationError extends AncoreSdkError {
   }
 }
 
+/**
+ * Thrown when session-key management operations fail after delegating to the
+ * account abstraction layer.
+ */
+export class SessionKeyManagementError extends AncoreSdkError {
+  public readonly cause?: unknown;
+
+  constructor(message: string, code: string = 'SESSION_KEY_MANAGEMENT_FAILED', cause?: unknown) {
+    super(code, message);
+    this.name = 'SessionKeyManagementError';
+    this.cause = cause;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Network / submission errors
 // ---------------------------------------------------------------------------

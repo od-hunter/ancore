@@ -5,6 +5,12 @@
 
 export const SDK_VERSION = '0.1.0';
 
+// Client
+export { AncoreClient, type AncoreClientOptions } from './ancore-client';
+
+// Session key helpers
+export { addSessionKey, type AddSessionKeyParams } from './add-session-key';
+
 // Account transaction builder (wrapper around Stellar SDK's TransactionBuilder)
 export {
   AccountTransactionBuilder,
@@ -26,6 +32,7 @@ export {
   SimulationFailedError,
   SimulationExpiredError,
   BuilderValidationError,
+  SessionKeyManagementError,
   TransactionSubmissionError,
   SessionKeyExecutionValidationError,
   SessionKeyExecutionError,

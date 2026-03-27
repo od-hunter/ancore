@@ -33,6 +33,12 @@ export type { AmountInputProps } from './components/amount-input';
 export { AddressDisplay } from './components/address-display';
 export type { AddressDisplayProps } from './components/address-display';
 
+export { QRCode } from './components/QRCode';
+export type { QRCodeProps } from './components/QRCode';
+
+export { Identicon } from './components/Identicon';
+export type { IdenticonProps } from './components/Identicon';
+
 // Form system
 export { Form, FormSubmit, FormError } from './components/Form/Form';
 export type { FormProps, FormSubmitProps, FormErrorProps } from './components/Form/Form';
@@ -64,8 +70,9 @@ export type { PasswordStrength } from './components/Form/validation';
 // Toast / Notifications
 export { Toast } from './components/Toast/Toast';
 export type { ToastProps } from './components/Toast/Toast';
+export { ToastContainer } from './components/Toast/ToastContainer';
 export { NotificationProvider } from './components/Toast/NotificationProvider';
-export type { Toast as ToastItem, ToastVariant } from './components/Toast/NotificationProvider';
+export type { ToastItem, ToastVariant } from './components/Toast/NotificationProvider';
 export { useToast } from './components/Toast/useToast';
 
 // Utility functions
