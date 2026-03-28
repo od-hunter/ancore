@@ -42,6 +42,8 @@ pub enum ContractError {
     SessionKeyExpired = 6,
     /// Insufficient permissions
     InsufficientPermission = 7,
+    /// Invalid version provided for migration
+    InvalidVersion = 8,
 }
 
 /// Event topic naming convention
@@ -71,6 +73,18 @@ mod events {
     pub fn session_key_revoked(env: &Env) -> Symbol {
         Symbol::new(env, "session_key_revoked")
     }
+
+    /// Event emitted when the contract is upgraded.
+    /// Data: (new_wasm_hash: BytesN<32>)
+    pub fn upgraded(env: &Env) -> Symbol {
+        Symbol::new(env, "upgraded")
+    }
+
+    /// Event emitted when a migration is completed.
+    /// Data: (old_version: u32, new_version: u32)
+    pub fn migrated(env: &Env) -> Symbol {
+        Symbol::new(env, "migrated")
+    }
 }
 
 #[contracttype]
@@ -86,6 +100,7 @@ pub enum DataKey {
     Owner,
     Nonce,
     SessionKey(BytesN<32>),
+    Version,
 }
 
 const DAY_IN_LEDGERS: u32 = 17280; // 24 hours * 60 min * 60 sec / 5 sec per ledger
@@ -106,6 +121,7 @@ impl AncoreAccount {
 
         env.storage().instance().set(&DataKey::Owner, &owner);
         env.storage().instance().set(&DataKey::Nonce, &0u64);
+        env.storage().instance().set(&DataKey::Version, &1u32);
 
         // Extend instance TTL
         env.storage().instance().extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
@@ -130,6 +146,14 @@ impl AncoreAccount {
             .instance()
             .get(&DataKey::Nonce)
             .unwrap_or(0))
+    }
+
+    /// Get the current contract version
+    pub fn get_version(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::Version)
+            .unwrap_or(0)
     }
 
     /// Execute a transaction: validate nonce, perform cross-contract call, increment nonce.
@@ -234,6 +258,52 @@ impl AncoreAccount {
         Ok(())
     }
 
+    /// Upgrade the contract's WASM logic
+    ///
+    /// # Security
+    /// - Requires owner authorization
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), ContractError> {
+        let owner = Self::get_owner(env.clone())?;
+        owner.require_auth();
+
+        env.deployer().update_current_contract_wasm(new_wasm_hash.clone());
+
+        // Extend instance TTL to keep contract alive
+        env.storage().instance().extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+
+        // Emit upgraded event
+        env.events()
+            .publish((events::upgraded(&env),), new_wasm_hash);
+
+        Ok(())
+    }
+
+    /// Execute a contract migration for a new version
+    ///
+    /// # Security
+    /// - Requires owner authorization
+    /// - Migration version must be strictly increasing
+    pub fn migrate(env: Env, new_version: u32) -> Result<(), ContractError> {
+        let owner = Self::get_owner(env.clone())?;
+        owner.require_auth();
+
+        let current_version = Self::get_version(env.clone());
+        if new_version <= current_version {
+            return Err(ContractError::InvalidVersion);
+        }
+
+        env.storage().instance().set(&DataKey::Version, &new_version);
+
+        // Extend instance TTL to keep contract alive
+        env.storage().instance().extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+
+        // Emit migrated event
+        env.events()
+            .publish((events::migrated(&env),), (current_version, new_version));
+
+        Ok(())
+    }
+
     /// Get a session key
     pub fn get_session_key(env: Env, public_key: BytesN<32>) -> Option<SessionKey> {
         env.storage()
@@ -277,6 +347,26 @@ impl AncoreAccount {
             ledgers_to_live,
         );
     }
+
+    /// Upgrade the contract
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), ContractError> {
+        let owner = Self::get_owner(env.clone())?;
+        owner.require_auth();
+
+        let current_version: u32 = env.storage().instance().get(&DataKey::Version).unwrap_or(0);
+        env.storage().instance().set(&DataKey::Version, &(current_version + 1));
+        
+        env.deployer().update_current_contract_wasm(new_wasm_hash);
+        
+        env.storage().instance().extend_ttl(INSTANCE_BUMP_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+
+        Ok(())
+    }
+
+    /// Get contract version
+    pub fn get_version(env: Env) -> u32 {
+        env.storage().instance().get(&DataKey::Version).unwrap_or(0)
+    }
 }
 
 #[cfg(test)]
@@ -295,6 +385,7 @@ mod test {
 
         assert_eq!(client.get_owner(), owner);
         assert_eq!(client.get_nonce(), 0);
+        assert_eq!(client.get_version(), 1);
     }
 
     #[test]

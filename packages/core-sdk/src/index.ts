@@ -39,9 +39,7 @@ export {
 } from './errors';
 
 export {
-  AncoreClient,
   mapExecuteWithSessionKeyError,
-  type AncoreClientOptions,
   type ExecuteWithSessionKeyParams,
   type ExecuteWithSessionKeyResult,
   type SessionKeyExecutionLayer,
@@ -50,10 +48,24 @@ export {
 } from './execute-with-session-key';
 
 // Secure Storage
-export { SecureStorageManager } from './storage/secure-storage-manager';
+export {
+  SecureStorageManager,
+  type SecureStorageManagerOptions,
+} from './storage/secure-storage-manager';
 export type {
   EncryptedPayload,
   StorageAdapter,
   AccountData,
   SessionKeysData,
 } from './storage/types';
+
+// Encryption Primitives
+export {
+  deriveKey,
+  encrypt,
+  decrypt,
+  type EncryptedPayload as EncryptionPayload,
+} from './storage/encryption-primitives';
+
+// Backup Export/Import
+export { exportBackup, importBackup, type BackupPayload } from './storage/backup';
