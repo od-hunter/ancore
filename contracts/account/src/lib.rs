@@ -114,6 +114,9 @@ const DAY_IN_LEDGERS: u32 = 17280; // 24 hours * 60 min * 60 sec / 5 sec per led
 const INSTANCE_BUMP_AMOUNT: u32 = 30 * DAY_IN_LEDGERS; // 30 days
 const INSTANCE_BUMP_THRESHOLD: u32 = 15 * DAY_IN_LEDGERS; // 15 days
 
+/// Permission bit for session-key execute authorization.
+/// Issue #188: Session keys must have this permission to invoke transactions.
+/// Without this bit set, execute() returns InsufficientPermission error.
 pub const PERMISSION_EXECUTE: u32 = 1;
 
 
@@ -193,10 +196,14 @@ impl AncoreAccount {
             let session = Self::get_session_key(env.clone(), session_pk.clone())
                 .ok_or(ContractError::SessionKeyNotFound)?;
 
+            // Check session key has not expired
             if env.ledger().timestamp() >= session.expires_at {
                 return Err(ContractError::SessionKeyExpired);
             }
 
+            // Issue #188: Enforce explicit execute permission for session-key path
+            // Session keys must have PERMISSION_EXECUTE bit set to authorize transactions.
+            // This prevents unauthorized transaction invocation via scoped session keys.
             if !session.permissions.contains(PERMISSION_EXECUTE) {
                 return Err(ContractError::InsufficientPermission);
             }
