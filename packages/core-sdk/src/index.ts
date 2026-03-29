@@ -5,6 +5,20 @@
 
 export const SDK_VERSION = '0.1.0';
 
+// Client
+export { AncoreClient, type AncoreClientOptions } from './ancore-client';
+
+// Session key helpers
+export { addSessionKey, type AddSessionKeyParams } from './add-session-key';
+
+// Payment
+export {
+  sendPayment,
+  type SendPaymentParams,
+  type SendPaymentDeps,
+  type PaymentSigner,
+} from './send-payment';
+
 // Account transaction builder (wrapper around Stellar SDK's TransactionBuilder)
 export {
   AccountTransactionBuilder,
@@ -26,14 +40,40 @@ export {
   SimulationFailedError,
   SimulationExpiredError,
   BuilderValidationError,
+  SessionKeyManagementError,
   TransactionSubmissionError,
+  SessionKeyExecutionValidationError,
+  SessionKeyExecutionError,
 } from './errors';
 
+export {
+  mapExecuteWithSessionKeyError,
+  type ExecuteWithSessionKeyParams,
+  type ExecuteWithSessionKeyResult,
+  type SessionKeyExecutionLayer,
+  type SessionKeyExecutionRequest,
+  type SessionKeySignerInputs,
+} from './execute-with-session-key';
+
 // Secure Storage
-export { SecureStorageManager } from './storage/secure-storage-manager';
+export {
+  SecureStorageManager,
+  type SecureStorageManagerOptions,
+} from './storage/secure-storage-manager';
 export type {
   EncryptedPayload,
   StorageAdapter,
   AccountData,
   SessionKeysData,
 } from './storage/types';
+
+// Encryption Primitives
+export {
+  deriveKey,
+  encrypt,
+  decrypt,
+  type EncryptedPayload as EncryptionPayload,
+} from './storage/encryption-primitives';
+
+// Backup Export/Import
+export { exportBackup, importBackup, type BackupPayload } from './storage/backup';

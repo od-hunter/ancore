@@ -1,4 +1,4 @@
-import * as React from 'react';
+// ...existing code...
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@ancore/ui-kit';
 
@@ -22,11 +22,7 @@ export interface PaymentQRCodeProps {
  * Uses qrcode.react under the hood with a styled card border so it fits
  * the extension-wallet design system.
  */
-export function PaymentQRCode({
-  value,
-  size = 220,
-  className,
-}: PaymentQRCodeProps) {
+export function PaymentQRCode({ value, size = 220, className }: PaymentQRCodeProps) {
   return (
     <div
       className={cn(
