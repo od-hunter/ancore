@@ -1,7 +1,6 @@
 {
   "files": [
     {
-      "path": "apps/extension-wallet/dist/assets/popup/*.js",
       "maxSize": "200kB"
     },
     {

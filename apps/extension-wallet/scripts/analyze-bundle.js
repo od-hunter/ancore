@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
         plugins: [
           visualizer({
             filename: 'stats.html',
-            open: true,
+            open: process.env.CI !== 'true',
             gzipSize: true,
             brotliSize: true,
           }),

@@ -12,7 +12,9 @@ const TransactionDetail = lazy(() => import('../screens/TransactionDetail'));
 // Folder-based components (pointing to the entry screens shown in your log)
 const OnboardingFlow = lazy(() => import('../screens/Onboarding/OnboardingFlow'));
 const SendScreen = lazy(() => import('../screens/Send/SendScreen'));
-const SettingsScreen = lazy(() => import('../screens/Settings/AboutScreen'));
+const SettingsScreen = lazy(() =>
+  import('../screens/Settings/AboutScreen').then((m) => ({ default: m.AboutScreen }))
+);
 
 export function RouterShell(): JSX.Element {
   const accounts = useAccountStore((s) => s.accounts);
