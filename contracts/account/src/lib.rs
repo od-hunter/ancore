@@ -1080,4 +1080,45 @@ mod test {
         let res_u64: u64 = soroban_sdk::FromVal::from_val(&env, &result2);
         assert_eq!(res_u64, 0);
     }
+
+    #[test]
+    fn test_execute_session_key_missing_payload_fails() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, AncoreAccount);
+        let client = AncoreAccountClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        client.initialize(&owner);
+        env.mock_all_auths();
+
+        let mut csprng = OsRng;
+        let signing_key = SigningKey::generate(&mut csprng);
+        let session_pk = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
+
+        let expires_at = env.ledger().timestamp() + 10000;
+        let mut permissions = Vec::new(&env);
+        permissions.push_back(PERMISSION_EXECUTE);
+
+        client.add_session_key(&session_pk, &expires_at, &permissions);
+
+        let callee_id = env.register_contract(None, AncoreAccount);
+        let function = soroban_sdk::symbol_short!("get_nonce");
+        let args = Vec::new(&env);
+
+        let (sig, _payload) = sign_payload(&env, &signing_key, &callee_id, &function, &args, 0);
+
+        // Invoke with signature_payload = None
+        let result = client.try_execute(
+            &CallerIdentity::SessionKey(session_pk.clone()),
+            &callee_id,
+            &function,
+            &args,
+            &0u64,
+            &Some(session_pk),
+            &Some(sig),
+            &None, // Missing payload
+        );
+
+        assert_eq!(result, Err(Ok(ContractError::Unauthorized)));
+    }
 }
