@@ -450,6 +450,15 @@ mod test {
     }
 
     #[test]
+    fn test_get_version_defaults_to_zero_before_initialize_for_compatibility() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, AncoreAccount);
+        let client = AncoreAccountClient::new(&env, &contract_id);
+
+        assert_eq!(client.get_version(), 0);
+    }
+
+    #[test]
     fn test_initialize_emits_event() {
         let env = Env::default();
         let contract_id = env.register_contract(None, AncoreAccount);
