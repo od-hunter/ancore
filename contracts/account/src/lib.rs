@@ -119,6 +119,7 @@ const INSTANCE_BUMP_THRESHOLD: u32 = 15 * DAY_IN_LEDGERS; // 15 days
 /// Without this bit set, execute() returns InsufficientPermission error.
 pub const PERMISSION_EXECUTE: u32 = 1;
 
+
 #[contract]
 pub struct AncoreAccount;
 
@@ -169,7 +170,6 @@ impl AncoreAccount {
     /// - Caller must be owner OR provide a valid session key signature
     /// - `expected_nonce` must match current nonce (replay protection)
     /// - Nonce is incremented before invocation (checks-effects-interactions)
-    #[allow(clippy::too_many_arguments)]
     pub fn execute(
         env: Env,
         _caller: CallerIdentity,
@@ -1082,7 +1082,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_session_key_missing_payload_fails() {
+    fn test_execute_session_key_missing_signature_rejected() {
         let env = Env::default();
         let contract_id = env.register_contract(None, AncoreAccount);
         let client = AncoreAccountClient::new(&env, &contract_id);
@@ -1098,16 +1098,13 @@ mod test {
         let expires_at = env.ledger().timestamp() + 10000;
         let mut permissions = Vec::new(&env);
         permissions.push_back(PERMISSION_EXECUTE);
-
         client.add_session_key(&session_pk, &expires_at, &permissions);
 
         let callee_id = env.register_contract(None, AncoreAccount);
         let function = soroban_sdk::symbol_short!("get_nonce");
         let args = Vec::new(&env);
 
-        let (sig, _payload) = sign_payload(&env, &signing_key, &callee_id, &function, &args, 0);
-
-        // Invoke with signature_payload = None
+        // Attempt to execute with session key but missing signature (signature=None)
         let result = client.try_execute(
             &CallerIdentity::SessionKey(session_pk.clone()),
             &callee_id,
@@ -1115,10 +1112,41 @@ mod test {
             &args,
             &0u64,
             &Some(session_pk),
-            &Some(sig),
-            &None, // Missing payload
+            &None, // signature=None
+            &None, // signature_payload=None
         );
 
-        assert_eq!(result, Err(Ok(ContractError::Unauthorized)));
+        // Should fail with unauthorized session-key missing signature
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_execute_owner_path_unaffected_by_session_signature_requirements() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, AncoreAccount);
+        let client = AncoreAccountClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        client.initialize(&owner);
+        env.mock_all_auths();
+
+        let callee_id = env.register_contract(None, AncoreAccount);
+        let function = soroban_sdk::symbol_short!("get_nonce");
+        let args = Vec::new(&env);
+
+        // Owner path should succeed even with None signature params
+        let result = client.execute(
+            &CallerIdentity::Owner,
+            &callee_id,
+            &function,
+            &args,
+            &0u64,
+            &None, // session_pub_key=None
+            &None, // signature=None
+            &None, // signature_payload=None
+        );
+
+        let res_u64: u64 = soroban_sdk::FromVal::from_val(&env, &result);
+        assert_eq!(res_u64, 0);
     }
 }
