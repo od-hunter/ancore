@@ -1,0 +1,114 @@
+# Pull Request: Build Complete Onboarding Flow (Account Creation)
+
+## Summary
+This PR implements the complete account creation onboarding flow for the Ancore extension wallet, allowing first-time users to securely set up their wallet with a recovery phrase, password, and deployed account contract on Stellar testnet.
+
+## Changes Made
+
+### New Files Created
+1. **`apps/extension-wallet/src/hooks/useOnboarding.ts`**
+   - Custom hook for managing onboarding state
+   - Mnemonic generation using bip39
+   - Password strength validation
+   - Account deployment orchestration
+   - Encryption of secret key using password
+
+2. **`apps/extension-wallet/src/screens/Onboarding/WelcomeScreen.tsx`**
+   - Welcome screen introducing Ancore wallet
+   - Call-to-action to start onboarding
+
+3. **`apps/extension-wallet/src/screens/Onboarding/MnemonicScreen.tsx`**
+   - Displays 12-word recovery phrase
+   - Security warnings about backing up phrase
+   - Copy to clipboard functionality
+
+4. **`apps/extension-wallet/src/screens/Onboarding/VerifyMnemonicScreen.tsx`**
+   - Verifies user has saved their recovery phrase
+   - Random word verification (word 3, 7, 11)
+
+5. **`apps/extension-wallet/src/screens/Onboarding/PasswordScreen.tsx`**
+   - Password creation with strength validation
+   - Confirm password matching
+   - Password requirements display
+
+6. **`apps/extension-wallet/src/screens/Onboarding/DeployScreen.tsx`**
+   - Account contract deployment to Stellar testnet
+   - Multi-step deployment progress
+   - Loading states for blockchain operations
+   - Error handling with retry option
+
+7. **`apps/extension-wallet/src/screens/Onboarding/SuccessScreen.tsx`**
+   - Success confirmation
+   - Display of account address and contract ID
+   - Copy functionality for addresses
+
+8. **`apps/extension-wallet/src/screens/Onboarding/index.ts`**
+   - Barrel export for all onboarding screens
+
+### Tests Added
+- **`apps/extension-wallet/src/screens/Onboarding/__tests__/onboarding.test.tsx`** - Unit tests for each screen
+- **`apps/extension-wallet/src/screens/Onboarding/__tests__/onboarding-e2e.test.tsx`** - E2E test for complete flow
+
+### Dependencies Updated
+- Added `@ancore/crypto` to package.json
+- Added `@ancore/stellar` to package.json  
+- Added `@ancore/account-abstraction` to package.json
+- Added `@stellar/stellar-sdk` to package.json
+
+## Flow Steps
+1. **Welcome** → Introduces Ancore and explains wallet purpose
+2. **Generate Mnemonic** → Shows 12-word recovery phrase
+3. **Verify Mnemonic** → User confirms specific words
+4. **Set Password** → Creates password with strength validation
+5. **Deploy Account** → Calls contract initialize() on testnet
+6. **Success** → Shows account address and confirmation
+
+## API Design
+```tsx
+<OnboardingFlow>
+  <WelcomeScreen onNext={handleNext} />
+  <MnemonicScreen
+    mnemonic={mnemonic}
+    onNext={handleNext}
+    onBack={handleBack}
+  />
+  <VerifyMnemonicScreen
+    mnemonic={mnemonic}
+    onSuccess={handleSuccess}
+    onBack={handleBack}
+  />
+  <PasswordScreen
+    onSubmit={handlePassword}
+    onBack={handleBack}
+  />
+  <DeployScreen
+    onComplete={handleComplete}
+    onRetry={handleRetry}
+    onBack={handleBack}
+  />
+  <SuccessScreen
+    publicKey={account.publicKey}
+    contractId={account.contractId}
+    onComplete={handleComplete}
+  />
+</OnboardingFlow>
+```
+
+## Technical Details
+- Uses bip39 for mnemonic generation
+- Uses @stellar/stellar-sdk for key derivation
+- Uses @ancore/crypto for password-based encryption
+- Implements proper error handling for blockchain operations
+- Loading states during deployment steps (deploying, funding, initializing)
+
+## Success Criteria
+- ✅ Flow is clear and easy to follow
+- ✅ Mnemonic backup is emphasized with warnings
+- ✅ Password validation works with strength requirements
+- ✅ Deployment can succeed on testnet
+- ✅ Unit tests for all screens
+- ✅ E2E test for complete flow
+
+## Notes
+- The build has a pre-existing error in @ancore/crypto package (TypeScript errors with Crypto/CryptoKey types) that needs to be addressed separately
+- All onboarding screens are TypeScript compliant with no errors
