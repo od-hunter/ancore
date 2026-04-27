@@ -39,6 +39,6 @@ pnpm --filter @ancore/extension-wallet test:e2e:smoke:debug
 
 ## CI Integration
 
-- Pull request and branch CI includes a required `Extension E2E Smoke` job.
+- Pull request and branch CI runs `Extension E2E Smoke` as a browser matrix (`chromium`, `firefox`).
 - Release gate includes `[Gate 6] Extension E2E Smoke`.
 - Any failure blocks release gate completion unless a manual override is explicitly used for other failing gates.

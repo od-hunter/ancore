@@ -66,6 +66,10 @@ jobs:
   extension-e2e-smoke:
     name: Extension E2E Smoke
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
     steps:
       - uses: actions/checkout@v4
 
@@ -84,16 +88,16 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browser dependencies
-        run: pnpm --filter @ancore/extension-wallet exec playwright install --with-deps chromium
+        run: pnpm --filter @ancore/extension-wallet exec playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run extension smoke suite
-        run: pnpm --filter @ancore/extension-wallet test:e2e:smoke
+        run: pnpm --filter @ancore/extension-wallet test:e2e:smoke -- --project=${{ matrix.browser }}
 
       - name: Upload extension E2E failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: extension-e2e-failure-artifacts
+          name: extension-e2e-failure-artifacts-${{ matrix.browser }}
           path: apps/extension-wallet/test-results/
           retention-days: 7
 

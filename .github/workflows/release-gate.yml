@@ -256,6 +256,10 @@ jobs:
   gate-extension-e2e-smoke:
     name: '[Gate 6] Extension E2E Smoke'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
     outputs:
       status: ${{ steps.result.outputs.status }}
     steps:
@@ -274,10 +278,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browser dependencies
-        run: pnpm --filter @ancore/extension-wallet exec playwright install --with-deps chromium
+        run: pnpm --filter @ancore/extension-wallet exec playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run extension smoke suite
-        run: pnpm --filter @ancore/extension-wallet test:e2e:smoke
+        run: pnpm --filter @ancore/extension-wallet test:e2e:smoke -- --project=${{ matrix.browser }}
 
       - id: result
         if: always()
@@ -308,7 +312,7 @@ jobs:
           GATE3: ${{ needs.gate-security.outputs.status }}
           GATE4: ${{ needs.gate-observability.outputs.status }}
           GATE5: ${{ needs.gate-release-docs.outputs.status }}
-          GATE6: ${{ needs.gate-extension-e2e-smoke.outputs.status }}
+          GATE6: ${{ needs.gate-extension-e2e-smoke.result }}
           REF:   ${{ github.ref_name }}
           SHA:   ${{ github.sha }}
           ACTOR: ${{ github.actor }}
