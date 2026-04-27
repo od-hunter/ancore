@@ -281,7 +281,7 @@ jobs:
         run: pnpm --filter @ancore/extension-wallet exec playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run extension smoke suite
-        run: pnpm --filter @ancore/extension-wallet test:e2e:smoke -- --project=${{ matrix.browser }}
+        run: pnpm --filter @ancore/extension-wallet exec playwright test --config=tests/playwright.config.ts --grep @smoke --project=${{ matrix.browser }}
 
       - id: result
         if: always()
