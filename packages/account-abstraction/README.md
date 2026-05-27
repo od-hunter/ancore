@@ -99,6 +99,7 @@ const accountContract = new AccountContract({
   contractId: 'CAAAAAAA...',
   networkPassphrase: 'Test SDF Network ; September 2015',
   rpcUrl: 'https://soroban-testnet.stellar.org',
+  keypair: owner,
 });
 
 // Initialize account
@@ -135,7 +136,8 @@ import {
 try {
   await accountContract.execute(/* ... */);
 } catch (error) {
-  const contractError = mapContractError(error);
+  const message = error instanceof Error ? error.message : String(error);
+  const contractError = mapContractError(message, error);
 
   if (contractError instanceof UnauthorizedError) {
     console.error('Not authorized to perform this action');
@@ -254,7 +256,7 @@ interface AccountContractSessionKeyTtlRefreshedEvent {
 ### Dashboard Event Listener
 
 ```typescript
-import { decodeAccountContractEvent } from '@ancore/account-abstraction';
+import { decodeAccountContractEvent, decodeAccountContractRpcEvent } from '@ancore/account-abstraction';
 
 async function watchAccountEvents(contractId: string) {
   const events = await stellar.getEvents({
@@ -262,7 +264,7 @@ async function watchAccountEvents(contractId: string) {
   });
 
   for (const event of events) {
-    const decoded = decodeAccountContractEvent(event.contractEvent);
+    const decoded = decodeAccountContractRpcEvent(event);
 
     if (decoded?.event.type === 'executed') {
       updateTransactionHistory({
@@ -278,7 +280,7 @@ async function watchAccountEvents(contractId: string) {
 ### Indexer Service
 
 ```typescript
-import { decodeAccountContractEvent } from '@ancore/account-abstraction';
+import { decodeAccountContractEvent, decodeAccountContractRpcEvent } from '@ancore/account-abstraction';
 
 async function indexContractEvents(ledger: Ledger) {
   for (const tx of ledger.transactions) {
@@ -301,7 +303,7 @@ async function indexContractEvents(ledger: Ledger) {
 ### Mobile Wallet Notifications
 
 ```typescript
-import { decodeAccountContractEvent } from '@ancore/account-abstraction';
+import { decodeAccountContractEvent, decodeAccountContractRpcEvent } from '@ancore/account-abstraction';
 
 function processEventNotification(event: xdr.ContractEvent) {
   const decoded = decodeAccountContractEvent(event);

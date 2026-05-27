@@ -61,3 +61,20 @@ export {
   formatPermissionLabels,
   formatPermissions,
 } from './permission-formatter';
+
+export {
+  ACCOUNT_CONTRACT_EVENT_TOPICS,
+  decodeAccountContractEvent,
+  decodeAccountContractEventData,
+  decodeAccountContractRpcEvent,
+  type AccountContractEvent,
+  type AccountContractEventTopic,
+  type AccountContractInitializedEvent,
+  type AccountContractExecutedEvent,
+  type AccountContractSessionKeyAddedEvent,
+  type AccountContractSessionKeyRevokedEvent,
+  type AccountContractUpgradedEvent,
+  type AccountContractMigratedEvent,
+  type AccountContractSessionKeyTtlRefreshedEvent,
+  type DecodedAccountContractEventEnvelope,
+} from './event-decoders';

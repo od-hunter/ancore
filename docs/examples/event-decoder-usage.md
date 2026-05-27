@@ -21,10 +21,10 @@ import {
   decodeAccountContractEvent,
   ACCOUNT_CONTRACT_EVENT_TOPICS 
 } from '@ancore/account-abstraction';
-import { SorobanRpc, xdr } from '@stellar/stellar-sdk';
+import { rpc, xdr } from '@stellar/stellar-sdk';
 
 // Get transaction result from Stellar
-const server = new SorobanRpc.Server('https://soroban-testnet.stellar.org');
+const server = new rpc.Server('https://soroban-testnet.stellar.org');
 const txResult = await server.getTransaction(txHash);
 
 // Extract and decode events
@@ -70,9 +70,10 @@ function getExecutedEvents(events: xdr.ContractEvent[]): AccountContractExecuted
 import { useEffect, useState } from 'react';
 import { 
   decodeAccountContractEvent,
+  decodeAccountContractRpcEvent,
   type AccountContractEvent 
 } from '@ancore/account-abstraction';
-import { SorobanRpc } from '@stellar/stellar-sdk';
+import { rpc } from '@stellar/stellar-sdk';
 
 interface AccountEvent {
   contractId: string;
@@ -87,7 +88,7 @@ export function useAccountEvents(contractId: string) {
   
   useEffect(() => {
     async function fetchEvents() {
-      const server = new SorobanRpc.Server(
+      const server = new rpc.Server(
         process.env.REACT_APP_SOROBAN_RPC_URL!
       );
       
@@ -103,7 +104,7 @@ export function useAccountEvents(contractId: string) {
       
       const decoded = response.events
         .map(e => {
-          const decoded = decodeAccountContractEvent(e.contractEvent);
+          const decoded = decodeAccountContractRpcEvent(e);
           if (!decoded) return null;
           
           return {
@@ -243,6 +244,7 @@ function EventItem({ event, timestamp }: { event: AccountContractEvent; timestam
 // apps/mobile-wallet/src/services/eventNotifications.ts
 import { 
   decodeAccountContractEvent,
+  decodeAccountContractRpcEvent,
   type AccountContractEvent 
 } from '@ancore/account-abstraction';
 import { showNotification } from '../utils/notifications';
@@ -290,14 +292,18 @@ export function handleAccountEvent(event: xdr.ContractEvent) {
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
   const diff = timestamp - now;
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  
-  if (hours < 24) {
-    return `in ${hours} hours`;
+  const absHours = Math.abs(Math.floor(diff / (1000 * 60 * 60)));
+
+  if (Math.abs(diff) < 60 * 60 * 1000) {
+    return diff <= 0 ? 'now' : 'in less than an hour';
   }
-  
-  const days = Math.floor(hours / 24);
-  return `in ${days} days`;
+
+  if (absHours < 24) {
+    return diff < 0 ? `${absHours} hours ago` : `in ${absHours} hours`;
+  }
+
+  const absDays = Math.floor(absHours / 24);
+  return diff < 0 ? `${absDays} days ago` : `in ${absDays} days`;
 }
 ```
 
@@ -324,9 +330,11 @@ export function useSessionKeys(contractId: string) {
   useEffect(() => {
     async function loadSessionKeys() {
       const events = await fetchAccountEvents(contractId);
+      // Process events in ledger-ascending order so revokes apply after adds.
+      const sortedEvents = [...events].sort((a, b) => a.ledger - b.ledger);
       const keys = new Map<string, SessionKeyInfo>();
       
-      for (const event of events) {
+      for (const event of sortedEvents) {
         const decoded = decodeAccountContractEvent(event);
         if (!decoded) continue;
         
@@ -365,9 +373,10 @@ export function useSessionKeys(contractId: string) {
 // services/indexer/src/eventIndexer.ts
 import { 
   decodeAccountContractEvent,
+  decodeAccountContractRpcEvent,
   type AccountContractEvent 
 } from '@ancore/account-abstraction';
-import { SorobanRpc } from '@stellar/stellar-sdk';
+import { rpc } from '@stellar/stellar-sdk';
 import { db } from './database';
 
 interface IndexedEvent {
@@ -381,11 +390,11 @@ interface IndexedEvent {
 }
 
 export class EventIndexer {
-  private server: SorobanRpc.Server;
+  private server: rpc.Server;
   private lastProcessedLedger: number = 0;
   
   constructor(rpcUrl: string) {
-    this.server = new SorobanRpc.Server(rpcUrl);
+    this.server = new rpc.Server(rpcUrl);
   }
   
   async indexEvents(startLedger?: number): Promise<void> {
@@ -404,7 +413,7 @@ export class EventIndexer {
     const events: IndexedEvent[] = [];
     
     for (const event of response.events) {
-      const decoded = decodeAccountContractEvent(event.contractEvent);
+      const decoded = decodeAccountContractRpcEvent(event);
       
       if (decoded) {
         events.push({
@@ -473,13 +482,13 @@ import {
   decodeAccountContractEvent,
   ACCOUNT_CONTRACT_EVENT_TOPICS 
 } from '@ancore/account-abstraction';
-import { SorobanRpc } from '@stellar/stellar-sdk';
+import { rpc } from '@stellar/stellar-sdk';
 
 export class TransactionMonitor {
-  private server: SorobanRpc.Server;
+  private server: rpc.Server;
   
   constructor(rpcUrl: string) {
-    this.server = new SorobanRpc.Server(rpcUrl);
+    this.server = new rpc.Server(rpcUrl);
   }
   
   async monitorTransaction(txHash: string): Promise<void> {
@@ -507,7 +516,7 @@ export class TransactionMonitor {
     }
   }
   
-  private extractEvents(result: SorobanRpc.GetTransactionResponse): xdr.ContractEvent[] {
+  private extractEvents(result: rpc.Api.GetTransactionResponse): xdr.ContractEvent[] {
     if (result.status !== 'SUCCESS' || !result.resultMetaXdr) {
       return [];
     }
@@ -537,18 +546,19 @@ export class TransactionMonitor {
 // apps/web-dashboard/src/services/eventStream.ts
 import { 
   decodeAccountContractEvent,
+  decodeAccountContractRpcEvent,
   type AccountContractEvent 
 } from '@ancore/account-abstraction';
-import { SorobanRpc } from '@stellar/stellar-sdk';
+import { rpc } from '@stellar/stellar-sdk';
 
 export class EventStream {
-  private server: SorobanRpc.Server;
+  private server: rpc.Server;
   private listeners: Map<string, Set<(event: AccountContractEvent) => void>> = new Map();
   private polling: boolean = false;
   private lastLedger: number = 0;
   
   constructor(rpcUrl: string) {
-    this.server = new SorobanRpc.Server(rpcUrl);
+    this.server = new rpc.Server(rpcUrl);
   }
   
   subscribe(contractId: string, callback: (event: AccountContractEvent) => void): () => void {
@@ -607,7 +617,7 @@ export class EventStream {
     });
     
     for (const event of response.events) {
-      const decoded = decodeAccountContractEvent(event.contractEvent);
+      const decoded = decodeAccountContractRpcEvent(event);
       
       if (decoded) {
         const listeners = this.listeners.get(decoded.contractId);
@@ -712,7 +722,7 @@ function handleEvent(envelope: DecodedAccountContractEventEnvelope): void {
 
 ## Schema Evolution
 
-When the contract adds new event types:
+When the contract adds new event types, **for maintainers of `@ancore/account-abstraction`**:
 
 1. Update `event-decoders.ts` with new event interfaces
 2. Add new cases to `decodeAccountContractEventData`
